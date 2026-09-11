@@ -71,6 +71,12 @@ async function init() {
   const p = getPool();
   await p.query(SCHEMA_SQL);
 
+  // One-time cleanup: an earlier version of the seed generator had a bug
+  // that created two literal garbage people named "note" (from malformed
+  // Python data, not anything a real person would be named). Safe to run
+  // on every cold start — a no-op once they're gone.
+  await p.query("DELETE FROM people WHERE name = 'note' AND note IS NULL");
+
   // Always sync in any seed people not already present (by id), instead of
   // only seeding once on a totally empty table. Growing api/_lib/seed.json
   // (more names transcribed from the source PDF over time) previously never
