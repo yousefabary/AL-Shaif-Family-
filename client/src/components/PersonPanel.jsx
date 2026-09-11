@@ -62,6 +62,9 @@ export default function PersonPanel({
 
         {mode === "view" && person && (
           <div className="panel-view">
+            {person.photoUrl && (
+              <img className="panel-photo" src={person.photoUrl} alt={person.name} />
+            )}
             <h2>{person.name}</h2>
             {person.note && <p className="panel-note">{person.note}</p>}
             <dl className="panel-meta">

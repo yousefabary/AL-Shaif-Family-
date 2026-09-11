@@ -14,6 +14,9 @@
   --link: #c9a877;
   --danger: #b3423a;
   --shadow: 0 8px 30px rgba(60, 40, 10, 0.15);
+  --trunk: #c98a3f;
+  --trunk-dark: #7a4f1c;
+  --leaf: #e3f3e8;
 }
 
 html,
@@ -214,43 +217,70 @@ body {
 .tree-container {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+.tree-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 4;
+  display: flex;
+  gap: 8px;
 }
 .tree-svg {
   cursor: grab;
+  background: linear-gradient(to top, #eef6ee 0%, var(--bg) 55%);
 }
 .tree-svg:active {
   cursor: grabbing;
 }
 .tree-link {
   fill: none;
-  stroke: #c9a877;
-  stroke-width: 1.6px;
-  opacity: 0.75;
+  stroke: #8a8a8a;
+  stroke-width: 1.3px;
+  opacity: 0.65;
+}
+.tree-link.trunk {
+  stroke: var(--trunk);
+  stroke-width: 9px;
+  opacity: 0.95;
+  stroke-linecap: round;
 }
 .tree-node-box {
-  fill: #fffefb;
-  stroke: var(--accent);
-  stroke-width: 1.3px;
+  fill: var(--leaf);
+  stroke: #2f2f2f;
+  stroke-width: 1px;
   transition: fill 0.15s;
 }
 .tree-node {
   cursor: pointer;
 }
 .tree-node:hover .tree-node-box {
-  fill: var(--accent-light);
+  fill: #d8ede0;
 }
 .tree-node.selected .tree-node-box {
   fill: var(--accent);
   stroke: var(--accent-dark);
+  stroke-width: 2px;
 }
 .tree-node.selected .tree-node-text {
   fill: #fff;
   font-weight: 700;
 }
 .tree-node.root .tree-node-box {
-  fill: #efe0bd;
-  stroke: var(--accent-dark);
+  fill: var(--trunk);
+  stroke: var(--trunk-dark);
   stroke-width: 2px;
+  rx: 22;
+}
+.tree-node.root .tree-node-text {
+  fill: #fff;
+  font-weight: 700;
+}
+.tree-node.trunk:not(.root):not(.selected) .tree-node-box {
+  fill: #fdf6e8;
+  stroke: var(--trunk-dark);
+  stroke-width: 1.6px;
 }
 .tree-node-text {
   font-size: 13px;
@@ -331,6 +361,15 @@ body {
 .panel h2 {
   margin: 0 0 12px;
   color: var(--accent-dark);
+}
+.panel-photo {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid var(--accent-light);
+  margin: 0 auto 14px;
 }
 .panel-note {
   color: var(--muted);
@@ -442,5 +481,23 @@ body {
   }
   .panel {
     padding: 18px;
+  }
+}
+
+/* ---------- print ---------- */
+@media print {
+  .app-header,
+  .app-footer,
+  .tree-toolbar,
+  .tree-hint,
+  .panel-backdrop,
+  .pdf-backdrop {
+    display: none !important;
+  }
+  .app-main {
+    overflow: visible;
+  }
+  .tree-svg {
+    background: #fff;
   }
 }

@@ -118,6 +118,9 @@ export default function App() {
           <button className="btn btn-small" onClick={() => setShowPdf(true)}>
             عرض الوثيقة الأصلية (PDF)
           </button>
+          <button className="btn btn-small" onClick={() => window.print()}>
+            طباعة الشجرة
+          </button>
           {isAdmin && (
             <button className="btn btn-small btn-primary" onClick={handleAddRoot}>
               + إضافة جذر جديد
