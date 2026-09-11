@@ -2,20 +2,18 @@
   "name": "al-shaif-family-tree",
   "version": "1.0.0",
   "private": true,
-  "description": "Interactive, editable website for the Al-Shaif family tree (شجرة عائلة آل الشايف)",
+  "description": "Interactive, editable website for the Al-Shaif family tree (شجرة عائلة آل الشايف) — deployed on Vercel",
   "type": "module",
   "scripts": {
-    "dev:server": "node --watch server/index.js",
-    "dev:client": "npm --prefix client run dev",
+    "dev": "vercel dev",
     "build": "npm --prefix client install && npm --prefix client run build",
-    "start": "node server/index.js",
     "install:all": "npm install && npm --prefix client install"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "vercel": "^37.0.0"
   },
   "engines": {
     "node": ">=18"

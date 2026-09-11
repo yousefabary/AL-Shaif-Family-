@@ -29,33 +29,72 @@ Use the built-in editor (open the original PDF side-by-side via **"عرض
 الوثيقة الأصلية"**) to add anyone missing and correct anything that looks off
 — that's exactly what the add/edit tools are for.
 
-## Project structure
+## Architecture — deployed on Vercel
+
+This app is built to run on **Vercel**: a React (Vite) frontend served as a
+static site, plus a `/api` folder of serverless functions backed by a
+**Postgres** database (e.g. Vercel Postgres or Neon). This is a different
+setup than a traditional always-on server — it needs no server to manage,
+scales automatically, and deploys on every `git push`.
 
 ```
-server/         Express API + SQLite storage (server/data/family.db)
-  data/seed.json  Initial data, loaded once into the database on first run
+api/            Serverless functions (the backend)
+  _lib/           shared helpers: db.js (Postgres pool + schema + seeding),
+                   auth.js (admin passcode cookie), format.js, seed.json
+  people/          GET/POST /api/people, GET/PUT/DELETE /api/people/:id
+  auth/            login / logout / status
+  export.js        full JSON backup download
 client/         React + Vite frontend (D3 tree visualization)
-  public/source/  The original PDF, served for in-app reference
+  public/source/    the original PDF, served for in-app reference
+vercel.json     build configuration
 ```
+
+## One-time setup: add a Postgres database
+
+The API needs a database to talk to. In your Vercel project dashboard:
+
+1. Go to **Storage → Create Database → Postgres** (Vercel's own Postgres,
+   powered by Neon — the free tier is plenty for this).
+2. **Connect** it to this project. Vercel automatically adds a `POSTGRES_URL`
+   environment variable to the project — no code changes needed.
+3. In **Settings → Environment Variables**, also set:
+   - `ADMIN_PASSWORD` — the passcode required to add/edit/delete people.
+   - `SESSION_SECRET` — any long random string (this signs the admin login
+     cookie; **required** on serverless — without a fixed value, logins would
+     get invalidated on cold starts).
+4. Redeploy. The very first request to `/api/people` automatically creates
+   the database table and seeds it from `api/_lib/seed.json` — nothing else
+   to run by hand.
 
 ## Running locally
 
-Requires Node.js 18+.
+Requires Node.js 18+ and the [Vercel CLI](https://vercel.com/docs/cli)
+(`npm i -g vercel`, or just use `npx vercel`).
 
 ```bash
-npm run install:all     # installs server + client dependencies
-npm run build            # builds the React frontend into client/dist
-ADMIN_PASSWORD=choose-a-strong-passcode npm start
+npm run install:all
+vercel link          # first time only — links this folder to your Vercel project
+vercel env pull       # pulls POSTGRES_URL / ADMIN_PASSWORD / SESSION_SECRET into .env.local
+npm run dev           # runs `vercel dev` — serves the site + /api on http://localhost:3000
 ```
 
-Then open http://localhost:3001
+`vercel dev` runs both the static frontend and the serverless API together,
+just like production. If you'd rather have Vite's fast hot-reload while
+iterating on the UI, run `vercel dev` in one terminal and
+`npm --prefix client run dev` in another (http://localhost:5173, proxying
+`/api` to the `vercel dev` instance on port 3000).
 
-For frontend development with hot reload (in a second terminal, after
-`npm start` is running the API on port 3001):
+Don't have a Vercel account yet, or want to develop against a local database
+instead? Create a `.env` file at the repo root with:
 
-```bash
-npm run dev:client       # http://localhost:5173, proxies /api to :3001
 ```
+POSTGRES_URL=postgres://user:pass@localhost:5432/alshaif
+ADMIN_PASSWORD=choose-a-passcode
+SESSION_SECRET=any-long-random-string
+```
+
+`vercel dev` reads `.env` / `.env.local` automatically, no `vercel link`
+needed for this path.
 
 ## Editing the tree
 
@@ -69,73 +108,33 @@ passcode to unlock editing. Once unlocked you can:
 - **حذف** — delete a person (asks for confirmation; deleting someone with
   children removes their whole branch, so double-check first).
 
-All changes are saved immediately to the server's database, visible to
-everyone who opens the site — this is what makes it possible to keep adding
+All changes are saved immediately to the shared Postgres database — visible
+to everyone who opens the site. That's what makes it possible to keep adding
 new family members over time instead of just viewing a static picture.
 
 ## Environment variables
 
-| Variable         | Default              | Purpose                                            |
-|-------------------|----------------------|-----------------------------------------------------|
-| `ADMIN_PASSWORD`  | `alshaif-family`     | Passcode required to add/edit/delete. **Change this before deploying publicly.** |
-| `SESSION_SECRET`  | random per process   | Signs the admin login cookie. Set a fixed value if you run multiple server instances/restarts and want logins to persist. |
-| `PORT`            | `3001`               | HTTP port the server listens on.                    |
-| `DB_PATH`         | `server/data/family.db` | Where the SQLite database file lives.            |
-| `CORS_ORIGIN`     | reflect request origin | Restrict this in production if serving the API from a different origin than the frontend. |
-
-Create a `.env`-style setup however your host expects (most platforms let you
-set these as dashboard "environment variables" — no code changes needed).
-
-## Deploying so the whole family can reach it
-
-Any host that runs a persistent Node.js process works (this app is **not**
-a static site — it needs the small backend for saved edits to be shared by
-everyone). A few options:
-
-### Docker (works almost anywhere: a VPS, Fly.io, Render, Railway, etc.)
-
-```bash
-docker build -t al-shaif-family-tree .
-docker run -d -p 3001:3001 \
-  -e ADMIN_PASSWORD=choose-a-strong-passcode \
-  -v al-shaif-data:/app/server/data \
-  al-shaif-family-tree
-```
-
-The `-v al-shaif-data:/app/server/data` volume is important — it's where the
-SQLite database (all the family data people add) lives, so it must persist
-across container restarts/redeploys.
-
-### A plain VPS (e.g. a small Ubuntu server)
-
-```bash
-git clone <this repo>
-cd AL-Shaif-Family-Treee-
-npm run install:all && npm run build
-ADMIN_PASSWORD=choose-a-strong-passcode PORT=3001 npm start
-```
-
-Put it behind Nginx/Caddy for HTTPS and a real domain, and use a process
-manager (`pm2 start server/index.js --name al-shaif-tree`, or a systemd unit)
-so it restarts automatically.
-
-### Render / Railway / Fly.io (Node app hosting)
-
-Point the platform at this repo, set the build command to
-`npm run install:all && npm run build`, the start command to `npm start`, add
-a **persistent disk** mounted at `server/data` (so the database survives
-deploys), and set `ADMIN_PASSWORD` in the dashboard.
+| Variable         | Required | Purpose                                            |
+|-------------------|----------|-----------------------------------------------------|
+| `POSTGRES_URL`    | yes      | Postgres connection string. Auto-set when you connect a Vercel Postgres database to the project. |
+| `ADMIN_PASSWORD`  | recommended | Passcode required to add/edit/delete. Defaults to `alshaif-family` if unset — **change this before sharing the link publicly.** |
+| `SESSION_SECRET`  | recommended | Signs the admin login cookie. **Set a fixed value** — without one, admin logins can get invalidated whenever a serverless instance cold-starts. |
 
 ## Backing up your data
 
-`GET /api/export` (while logged in isn't required) downloads a full JSON
-snapshot of everyone currently in the tree — useful before a big edit, or as
-a periodic backup. The live SQLite file at `server/data/family.db` is also a
-complete backup on its own; copy it anywhere to save a snapshot.
+Visit `/api/export` to download a full JSON snapshot of everyone currently in
+the tree — useful before a big edit, or as a periodic backup.
+
+## Regenerating the seed data
+
+`tools/gen_seed.py` is the script that produced `api/_lib/seed.json` (run
+`python3 tools/gen_seed.py` from the repo root). It's only used the very
+first time the database is empty — once people exist, edit them through the
+website, not this file.
 
 ## Tech stack
 
-- **Backend:** Node.js, Express, better-sqlite3 (file-based SQL database, no
-  external database server needed).
+- **Backend:** Vercel serverless functions (plain Node, no framework) +
+  `pg` talking to Postgres.
 - **Frontend:** React + Vite, D3.js for the tree layout/zoom/pan, Cairo
   Arabic webfont, fully RTL.

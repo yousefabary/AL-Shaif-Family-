@@ -1,8 +1,0 @@
-node_modules
-client/node_modules
-client/dist
-server/data/family.db
-server/data/family.db-shm
-server/data/family.db-wal
-.git
-*.log

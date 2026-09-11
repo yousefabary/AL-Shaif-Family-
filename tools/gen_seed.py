@@ -367,9 +367,10 @@ if __name__ == "__main__":
             walk(c, nid)
     walk(data, None)
 
-    out_path = "server/data/seed.json" if os.path.isdir("server/data") else "seed.json"
+    out_path = "api/_lib/seed.json" if os.path.isdir("api/_lib") else "seed.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print(f"total people: {len(out)} -> wrote {out_path}")
-    print("Note: the running server only re-seeds an EMPTY database. Delete")
-    print("server/data/family.db (and -shm/-wal) after regenerating to apply changes.")
+    print("Note: the API only auto-seeds an EMPTY database. If the database already")
+    print("has people in it, truncate the `people` table (or use a fresh database)")
+    print("after regenerating this file for the new seed data to apply.")

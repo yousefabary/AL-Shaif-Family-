@@ -6,8 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:3001",
-      "/source": "http://localhost:3001",
+      // points at `vercel dev` (run from the repo root), which serves the /api
+      // serverless functions locally on port 3000 by default.
+      "/api": "http://localhost:3000",
     },
   },
 });
