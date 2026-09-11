@@ -110,21 +110,62 @@ export default function TreeView({ people, selectedId, onSelect, focusId }) {
     []
   );
 
+  const userInteracted = useRef(false);
   useEffect(() => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
     const zoom = d3
       .zoom()
-      .scaleExtent([0.12, 2.5])
+      .scaleExtent([0.03, 3])
       .on("zoom", (event) => {
+        // event.sourceEvent is only set for real user drag/wheel/touch input,
+        // never for our own programmatic zoom.transform(...) calls below —
+        // that's how we tell "user took control" apart from our own fitting.
+        if (event.sourceEvent) userInteracted.current = true;
         d3.select(gRef.current).attr("transform", event.transform);
       });
     svg.call(zoom);
     zoomRef.current = zoom;
-    // center initial view on the trunk root, anchored near the bottom of the viewport
-    svg.call(zoom.transform, d3.zoomIdentity.translate(dims.w / 2, dims.h - 90).scale(0.7));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [svgRef.current, rawRoot]);
+  }, [svgRef.current]);
+
+  // scales & centers the view so every currently-expanded node is visible at
+  // once, instead of leaving people to pan left/right to see the whole thing.
+  // Scale is never allowed to drop below MIN_READABLE_SCALE — past a certain
+  // point cramming more nodes in just turns names into unreadable dots, so
+  // beyond that we keep text legible and let people pan/scroll instead.
+  const fitToScreen = useCallback(
+    (animate = true) => {
+      if (!nodes.length || !svgRef.current || !zoomRef.current) return;
+      const MIN_READABLE_SCALE = 0.45;
+      const pad = 70;
+      const xs = nodes.map(posX);
+      const ys = nodes.map(posY);
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      const w = Math.max(maxX - minX, 1);
+      const h = Math.max(maxY - minY, 1);
+      const scale = Math.max(Math.min(dims.w / w, dims.h / h, 1.4), MIN_READABLE_SCALE);
+      const tx = dims.w / 2 - scale * (minX + maxX) / 2;
+      const ty = dims.h / 2 - scale * (minY + maxY) / 2;
+      const svg = d3.select(svgRef.current);
+      const transition = animate ? svg.transition().duration(500) : svg;
+      transition.call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+    },
+    [nodes, dims]
+  );
+
+  // Keep auto-fitting on every data/layout change until the user manually
+  // zooms or pans — this also naturally settles on the right view across the
+  // couple of renders it takes for the default-collapsed state to apply on
+  // first load (an earlier version raced that and fit to the wrong size).
+  useEffect(() => {
+    if (!nodes.length || focusId || userInteracted.current) return;
+    fitToScreen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes.length, dims.w, dims.h]);
 
   const focusOn = useCallback(
     (id) => {
@@ -180,7 +221,12 @@ export default function TreeView({ people, selectedId, onSelect, focusId }) {
     return () => clearTimeout(t);
   }, [focusId, idToNode, focusOn]);
 
+  // Resetting userInteracted lets the passive nodes.length-watching effect
+  // above pick up the change and fit correctly once React actually commits
+  // it — calling fitToScreen() directly here would close over the *current*
+  // (pre-toggle) nodes and fit the wrong, stale bounding box.
   const toggle = (id) => {
+    userInteracted.current = false;
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -189,7 +235,10 @@ export default function TreeView({ people, selectedId, onSelect, focusId }) {
     });
   };
 
-  const expandAll = () => setCollapsed(new Set());
+  const expandAll = () => {
+    userInteracted.current = false;
+    setCollapsed(new Set());
+  };
   const collapseAll = () => {
     if (!rawRoot) return;
     const next = new Set();
@@ -198,6 +247,7 @@ export default function TreeView({ people, selectedId, onSelect, focusId }) {
       (n.children || []).forEach((c) => walk(c, depth + 1));
     };
     walk(rawRoot, 0);
+    userInteracted.current = false;
     setCollapsed(next);
   };
 
@@ -208,6 +258,9 @@ export default function TreeView({ people, selectedId, onSelect, focusId }) {
   return (
     <div className="tree-container" ref={containerRef}>
       <div className="tree-toolbar">
+        <button className="btn btn-small btn-primary" onClick={() => fitToScreen()}>
+          احتواء الكل في الشاشة
+        </button>
         <button className="btn btn-small" onClick={expandAll}>
           توسيع الكل
         </button>
