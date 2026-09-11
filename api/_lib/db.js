@@ -70,9 +70,14 @@ export function ensureReady() {
 async function init() {
   const p = getPool();
   await p.query(SCHEMA_SQL);
-  const { rows } = await p.query("SELECT COUNT(*)::int AS c FROM people");
-  if (rows[0].c > 0) return;
 
+  // Always sync in any seed people not already present (by id), instead of
+  // only seeding once on a totally empty table. Growing api/_lib/seed.json
+  // (more names transcribed from the source PDF over time) previously never
+  // reached an already-seeded database — ON CONFLICT DO NOTHING makes this
+  // safe to re-run on every cold start: existing rows (including anything
+  // added/edited through the app itself) are never touched, only ids that
+  // don't exist yet get inserted.
   const client = await p.connect();
   try {
     await client.query("BEGIN");
