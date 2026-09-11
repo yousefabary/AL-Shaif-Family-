@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 // process, so the signing secret MUST be a fixed environment variable, not
 // generated at runtime — otherwise logins would randomly get invalidated.
 const SECRET = process.env.SESSION_SECRET || "insecure-default-secret-please-set-SESSION_SECRET";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "alshaif-family";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "2026";
 
 if (!process.env.SESSION_SECRET) {
   console.warn(
@@ -13,7 +13,7 @@ if (!process.env.SESSION_SECRET) {
 }
 if (!process.env.ADMIN_PASSWORD) {
   console.warn(
-    "[warning] ADMIN_PASSWORD is not set — using the default editing passcode 'alshaif-family'. Set ADMIN_PASSWORD before deploying publicly."
+    "[warning] ADMIN_PASSWORD is not set — using the default editing passcode '2026'. Set ADMIN_PASSWORD in Vercel if you want a different one."
   );
 }
 

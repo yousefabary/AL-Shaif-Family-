@@ -18,7 +18,7 @@ Ahmed Al-Shaif, 1403H).
 ## ⚠️ About the data
 
 The original poster is extremely dense (many hundreds of names in small
-clusters joined by curved connecting lines). This app currently seeds **494
+clusters joined by curved connecting lines). This app currently seeds **597
 people**: the complete ancestral backbone and every major named branch,
 transcribed by careful visual reading of the source PDF, plus a large sample
 of the descendant names. Some deep leaf-level names from the busiest clusters
@@ -117,7 +117,7 @@ new family members over time instead of just viewing a static picture.
 | Variable         | Required | Purpose                                            |
 |-------------------|----------|-----------------------------------------------------|
 | `POSTGRES_URL`    | yes      | Postgres connection string. Auto-set when you connect a Vercel Postgres database to the project. |
-| `ADMIN_PASSWORD`  | recommended | Passcode required to add/edit/delete. Defaults to `alshaif-family` if unset — **change this before sharing the link publicly.** |
+| `ADMIN_PASSWORD`  | optional | Passcode required to add/edit/delete. Defaults to `2026` if unset. Set this env var in Vercel if you ever want a different passcode. |
 | `SESSION_SECRET`  | recommended | Signs the admin login cookie. **Set a fixed value** — without one, admin logins can get invalidated whenever a serverless instance cold-starts. |
 
 ## Backing up your data
