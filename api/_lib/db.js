@@ -25,6 +25,25 @@ CREATE INDEX IF NOT EXISTS idx_people_parent ON people(parent_id);
 CREATE INDEX IF NOT EXISTS idx_people_name ON people(name);
 `;
 
+function buildPoolConfig(connectionString) {
+  const u = new URL(connectionString);
+  const isLocal = u.hostname === "localhost" || u.hostname === "127.0.0.1";
+  return {
+    host: u.hostname,
+    port: u.port ? Number(u.port) : 5432,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    database: u.pathname.replace(/^\//, "") || "postgres",
+    // Build the config from discrete fields instead of passing `connectionString`
+    // straight through: pg internally re-parses the connection string and lets
+    // whatever `sslmode` is embedded in it (Supabase/Neon URLs include one)
+    // silently override an explicit `ssl` option, which defeated this setting
+    // and caused "self-signed certificate in certificate chain" errors.
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+    max: 5,
+  };
+}
+
 let pool;
 export function getPool() {
   if (!pool) {
@@ -37,12 +56,7 @@ export function getPool() {
         "لا يوجد اتصال بقاعدة البيانات. أضف قاعدة بيانات Postgres لهذا المشروع من لوحة تحكم Vercel (Storage) ثم أعد النشر."
       );
     }
-    const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
-    pool = new Pool({
-      connectionString,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
-      max: 5,
-    });
+    pool = new Pool(buildPoolConfig(connectionString));
   }
   return pool;
 }
